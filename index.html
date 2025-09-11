@@ -16,6 +16,7 @@
             --text-color: #333;
             --header-color: #444;
             --border-color: #e0e0e0;
+            --danger-color: #e74c3c;
             --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
             --border-radius: 12px;
             --font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -29,6 +30,7 @@
             --text-color: #e0e0e0;
             --header-color: #f0f0f0;
             --border-color: #444;
+            --danger-color: #f15b4c;
             --shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
         }
 
@@ -262,7 +264,7 @@
         /* --- END of Sticky Column Styles --- */
 
         .edit-btn svg { fill: #f39c12; }
-        .delete-btn svg { fill: #e74c3c; }
+        .delete-btn svg { fill: var(--danger-color); }
 
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.6); animation: fadeIn 0.3s; }
         .modal-content { background-color: var(--card-background); margin: 8% auto; padding: 30px; border: 1px solid var(--border-color); width: 90%; max-width: 500px; border-radius: var(--border-radius); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); animation: slideIn 0.4s; }
@@ -272,6 +274,7 @@
         @keyframes slideIn { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
         #form-fields-container { max-height: 60vh; overflow-y: auto; padding-right: 15px; }
+        #form-fields-container > div { transition: all 0.3s ease-in-out; } /* Animation for hiding/showing */
         form label { display: block; margin-bottom: 8px; font-weight: 500; }
         form input, form select { 
             width: 100%; 
@@ -291,12 +294,12 @@
             border-color: var(--primary-color); 
             box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 20%, transparent); 
         }
-        .duration-picker {
+        .duration-picker, .day-month-picker {
             display: flex;
             gap: 10px;
             margin-bottom: 15px;
         }
-        .duration-picker select {
+        .duration-picker select, .day-month-picker select {
             flex: 1;
             margin-bottom: 0;
         }
@@ -304,7 +307,8 @@
         .form-actions button { padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; transition: transform 0.2s, opacity 0.3s; }
         .form-actions button:hover { transform: translateY(-2px); opacity: 0.9; }
         #save-btn { background-color: var(--primary-color); color: white; }
-        #cancel-btn { background-color: #ccc; }
+        #cancel-btn, #confirm-cancel-btn { background-color: #ccc; }
+        #confirm-ok-btn { background-color: var(--danger-color); color: white; }
         
         .loader-container { text-align: center; padding: 50px; }
         .loader { border: 5px solid color-mix(in srgb, var(--primary-color) 20%, transparent); border-top: 5px solid var(--primary-color); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: auto; }
@@ -331,22 +335,16 @@
             </div>
         </header>
         <main>
-            <!-- UPDATED: Filter Dropdowns -->
             <div class="filter-container">
                 <div class="filter-group">
                     <label for="yearFilter">Filter by Year:</label>
-                    <select id="yearFilter">
-                        <option value="all">All Years</option>
-                    </select>
+                    <select id="yearFilter"><option value="all">All Years</option></select>
                 </div>
                 <div class="filter-group">
                     <label for="dateFilter">Filter by Date:</label>
-                    <select id="dateFilter">
-                        <option value="all">All Dates</option>
-                    </select>
+                    <select id="dateFilter"><option value="all">All Dates</option></select>
                 </div>
             </div>
-
             <div id="loader" class="loader-container">
                 <div class="loader"></div>
                 <p>Loading Data...</p>
@@ -360,15 +358,14 @@
         </main>
     </div>
 
+    <!-- Data Entry/Edit Modal -->
     <div id="data-modal" class="modal">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
             <h2 id="modal-title">Add New Record</h2>
             <form id="data-form">
                 <input type="hidden" id="rowIndex" name="rowIndex">
-                <div id="form-fields-container">
-                    <!-- Dynamic form fields will be inserted here -->
-                </div>
+                <div id="form-fields-container"></div>
                 <div class="form-actions">
                     <button type="button" id="cancel-btn">Cancel</button>
                     <button type="submit" id="save-btn">Save</button>
@@ -377,16 +374,41 @@
         </div>
     </div>
 
+    <!-- Confirmation Modal for Deletion -->
+    <div id="confirm-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="confirm-title">Confirm Deletion</h2>
+            <p id="confirm-message">Are you sure you want to delete this record? This action cannot be undone.</p>
+            <div class="form-actions">
+                <button type="button" id="confirm-cancel-btn">Cancel</button>
+                <button type="button" id="confirm-ok-btn">Yes, Delete</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Info/Error Modal -->
+    <div id="info-modal" class="modal">
+        <div class="modal-content">
+             <span class="close-btn">&times;</span>
+            <h2 id="info-title">Information</h2>
+            <p id="info-message"></p>
+            <div class="form-actions">
+                 <button type="button" class="info-ok-btn">OK</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyjtl3u4mmtgD4KmvFE9ZrSleofoJM2SMtR1Parea8WYph6e9lsJeyV4ma6vGSx_2Nn/exec';
 
+        // --- Get All Elements ---
         const tableHead = document.getElementById('data-table-head');
         const tableBody = document.getElementById('data-table-body');
         const loader = document.getElementById('loader');
         const tableWrapper = document.getElementById('table-wrapper');
-        const modal = document.getElementById('data-modal');
         const addNewBtn = document.getElementById('addNewBtn');
-        const closeModalBtn = document.querySelector('.close-btn');
+        const dataModal = document.getElementById('data-modal');
+        const closeModalBtn = dataModal.querySelector('.close-btn');
         const cancelBtn = document.getElementById('cancel-btn');
         const dataForm = document.getElementById('data-form');
         const modalTitle = document.getElementById('modal-title');
@@ -395,49 +417,41 @@
         const formFieldsContainer = document.getElementById('form-fields-container');
         const yearFilter = document.getElementById('yearFilter');
         const dateFilter = document.getElementById('dateFilter');
-        
+        const confirmModal = document.getElementById('confirm-modal');
+        const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
+        const confirmOkBtn = document.getElementById('confirm-ok-btn');
+        const infoModal = document.getElementById('info-modal');
+        const infoTitle = document.getElementById('info-title');
+        const infoMessage = document.getElementById('info-message');
+        const infoOkBtn = infoModal.querySelector('.info-ok-btn');
+        const infoCloseBtn = infoModal.querySelector('.close-btn');
+
+        // --- Global State ---
         let sheetHeaders = [];
         let uniqueValues = {};
-        let allRecords = []; // Store all fetched records here
+        let allRecords = [];
 
-        // --- Configuration for Form Fields ---
-        const fixedDropdownOptions = {
-            'status': ['confirmed', 'pending', 'cancelled', 'not-booked'],
-            'type': ['travel', 'stay', 'food', 'activity', 'other'],
-            'berth': ['UPPER BIRTH', 'MIDDLE BIRTH', 'LOWER BIRTH', 'SIDE UPPER', 'SIDE LOWER', 'WINDOW SEAT', 'N/A']
-        };
+        // --- Configuration ---
+        const fixedDropdownOptions = { 'status': ['confirmed', 'pending', 'cancelled', 'not-booked'], 'type': ['travel', 'stay', 'food', 'activity', 'other'], 'berth': ['UPPER BIRTH', 'MIDDLE BIRTH', 'LOWER BIRTH', 'SIDE UPPER', 'SIDE LOWER', 'WINDOW SEAT', 'N/A'] };
         const dynamicDatalistColumns = ['guest_name', 'guest_initials', 'departure_city', 'arrival_city'];
-        const specialInputTypes = {
-            'check_in_date': 'date', 'check_out_date': 'date',
-            'start_date': 'date', 'end_date': 'date',
-            'check_in_time': 'time', 'check_out_time': 'time',
-            'start_time': 'time', 'end_time': 'time'
-        };
+        const specialInputTypes = { 'check_in_date': 'date', 'check_out_date': 'date', 'start_date': 'date', 'end_date': 'date', 'check_in_time': 'time', 'check_out_time': 'time', 'start_time': 'time', 'end_time': 'time' };
         const durationDaysColumn = 'duration_days';
         const durationHoursColumn = 'duration_hours';
-
-        // --- Date Formatting Helper Functions ---
+        const dateMonthColumn = 'date_month';
         const monthMap = { "January": "01", "February": "02", "March": "03", "April": "04", "May": "05", "June": "06", "July": "07", "August": "08", "September": "09", "October": "10", "November": "11", "December": "12" };
+        const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        
+        // Form field visibility configuration
+        const formFieldConfig = {
+            'stay': ['date_month','year','type','status','name','booking_no_pnr','check_in_date','check_in_time','check_out_date','check_out_time','duration_days','duration_hours','guest_name','guest_initials','fare','pdf_link'],
+            'travel': ['date_month','year','type','status','name','booking_no_pnr','start_time','end_time','start_date','end_date','duration_days','duration_hours','guest_name','guest_initials','fare','train_no','departure_city','arrival_city','seat_no','berth','pdf_link']
+        };
 
-        function parseSheetDate(dateStr) {
-            if (!dateStr) return '';
-            const parts = dateStr.replace(/,/g, '').split(' ');
-            if (parts.length < 3) return ''; 
-            const day = parts[0].padStart(2, '0');
-            const month = monthMap[parts[1]];
-            const year = parts[2];
-            if (!day || !month || !year) return '';
-            return `${year}-${month}-${day}`;
-        }
+        // --- Helper Functions ---
+        function parseSheetDate(dateStr) { if (!dateStr) return ''; const parts = dateStr.replace(/,/g, '').split(' '); if (parts.length < 3) return ''; const day = parts[0].padStart(2, '0'); const month = monthMap[parts[1]]; const year = parts[2]; if (!day || !month || !year) return ''; return `${year}-${month}-${day}`; }
+        function formatForSheet(dateStr) { if (!dateStr) return ''; const [year, month, day] = dateStr.split('-'); const date = new Date(year, month - 1, day); return date.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }); }
 
-        function formatForSheet(dateStr) {
-            if (!dateStr) return '';
-            const [year, month, day] = dateStr.split('-');
-            const date = new Date(year, month - 1, day);
-            const options = { day: 'numeric', month: 'long', year: 'numeric' };
-            return date.toLocaleDateString('en-US', options);
-        }
-
+        // --- Core Application Logic ---
         async function fetchData() {
             showLoader(true);
             try {
@@ -447,13 +461,11 @@
                 sheetHeaders = data.headers;
                 uniqueValues = data.uniqueValues;
                 allRecords = data.rows; 
-                
                 populateFilters(allRecords); 
-                renderTable(data.headers, allRecords); 
-
+                renderTable(sheetHeaders, allRecords); 
             } catch (error) {
                 console.error('Error fetching data:', error);
-                alert('Failed to fetch data. Make sure the Web App URL is correct and the Apps Script is updated.');
+                showInfo('Fetch Error', 'Failed to fetch data. Make sure the Web App URL is correct and the Apps Script is updated.');
             } finally {
                 showLoader(false);
             }
@@ -477,60 +489,54 @@
                         <button class="delete-btn" title="Delete"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path d="M24 20.188l-8.315-8.209 8.2-8.282-3.697-3.697-8.212 8.318-8.31-8.203-3.666 3.666 8.321 8.24-8.206 8.313 3.666 3.666 8.237-8.318 8.285 8.203z"/></svg></button>
                     </td>`;
                 row.querySelector('.edit-btn').addEventListener('click', () => openModal(item));
-                row.querySelector('.delete-btn').addEventListener('click', () => deleteRecord(item.rowIndex));
+                row.querySelector('.delete-btn').addEventListener('click', () => showDeleteConfirm(item.rowIndex));
                 tableBody.appendChild(row);
             });
         }
 
-        // --- UPDATED: Functions for cascading filters ---
         function populateFilters(records) {
-            const uniqueYears = [...new Set(records.map(record => record.year).filter(Boolean))].sort((a,b) => b - a); // Sort descending
+            const uniqueYears = [...new Set(records.map(record => record.year).filter(Boolean))].sort((a,b) => b - a);
             yearFilter.innerHTML = '<option value="all">All Years</option>';
-            uniqueYears.forEach(year => {
-                const option = document.createElement('option');
-                option.value = year;
-                option.textContent = year;
-                yearFilter.appendChild(option);
-            });
-            updateDateFilter(); // Populate date filter based on default "All Years"
+            uniqueYears.forEach(year => yearFilter.add(new Option(year, year)));
+            updateDateFilter();
         }
         
         function updateDateFilter() {
             const selectedYear = yearFilter.value;
             const recordsToUse = (selectedYear === 'all') ? allRecords : allRecords.filter(record => record.year === selectedYear);
-            
             const uniqueDates = [...new Set(recordsToUse.map(record => record.date_month).filter(Boolean))];
-             uniqueDates.sort((a, b) => {
-                const dateA = new Date(a + " " + (selectedYear === 'all' ? new Date().getFullYear() : selectedYear));
-                const dateB = new Date(b + " " + (selectedYear === 'all' ? new Date().getFullYear() : selectedYear));
-                if (isNaN(dateA)) return 1; 
-                if (isNaN(dateB)) return -1;
-                return dateA - dateB;
-            });
-
+            uniqueDates.sort((a, b) => new Date(a + " " + (selectedYear === 'all' ? new Date().getFullYear() : selectedYear)) - new Date(b + " " + (selectedYear === 'all' ? new Date().getFullYear() : selectedYear)));
             dateFilter.innerHTML = '<option value="all">All Dates</option>';
-            uniqueDates.forEach(date => {
-                const option = document.createElement('option');
-                option.value = date;
-                option.textContent = date;
-                dateFilter.appendChild(option);
-            });
+            uniqueDates.forEach(date => dateFilter.add(new Option(date, date)));
         }
         
         function applyFilter() {
             const selectedYear = yearFilter.value;
             const selectedDate = dateFilter.value;
             let filteredRecords = allRecords;
-
-            if (selectedYear !== 'all') {
-                filteredRecords = filteredRecords.filter(record => record.year === selectedYear);
-            }
-            if (selectedDate !== 'all') {
-                filteredRecords = filteredRecords.filter(record => record.date_month === selectedDate);
-            }
+            if (selectedYear !== 'all') filteredRecords = filteredRecords.filter(record => record.year === selectedYear);
+            if (selectedDate !== 'all') filteredRecords = filteredRecords.filter(record => record.date_month === selectedDate);
             renderTable(sheetHeaders, filteredRecords);
         }
         
+        // --- NEW: Function to update form field visibility ---
+        function updateFormVisibility(selectedType) {
+            const fieldsToShow = formFieldConfig[selectedType] || sheetHeaders; // Show all if type is not in config
+            const allFormFields = formFieldsContainer.querySelectorAll('div');
+
+            allFormFields.forEach(fieldDiv => {
+                const input = fieldDiv.querySelector('input, select');
+                // The name is directly on the input/select, or on the first select of a picker
+                const fieldName = input ? (input.name || input.id.split('-')[0]) : null;
+
+                if (fieldName && fieldsToShow.includes(fieldName)) {
+                    fieldDiv.style.display = 'block';
+                } else {
+                    fieldDiv.style.display = 'none';
+                }
+            });
+        }
+
         function openModal(record = null) {
             dataForm.reset();
             formFieldsContainer.innerHTML = '';
@@ -538,152 +544,114 @@
             sheetHeaders.forEach(header => {
                 const value = record ? record[header] : '';
                 let fieldHTML = '';
-
                 if (fixedDropdownOptions.hasOwnProperty(header)) {
-                    const options = fixedDropdownOptions[header];
-                    const optionsHTML = options.map(option => `<option value="${escapeHtml(option)}" ${value === option ? 'selected' : ''}>${escapeHtml(option)}</option>`).join('');
-                    fieldHTML = `<div><label for="${header}-input">${header}</label><select id="${header}-input" name="${header}">${optionsHTML}</select></div>`;
-                
+                    const optionsHTML = fixedDropdownOptions[header].map(o => `<option value="${escapeHtml(o)}" ${value === o ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('');
+                    fieldHTML = `<div><label>${header}</label><select name="${header}">${optionsHTML}</select></div>`;
                 } else if (dynamicDatalistColumns.includes(header)) {
-                    const options = uniqueValues[header] || [];
-                    const datalistId = `${header}-datalist`;
-                    const optionsHTML = options.map(opt => `<option value="${escapeHtml(opt)}"></option>`).join('');
-                    fieldHTML = `<div><label for="${header}-input">${header}</label><input type="text" id="${header}-input" name="${header}" list="${datalistId}" value="${escapeHtml(value)}" autocomplete="off"><datalist id="${datalistId}">${optionsHTML}</datalist></div>`;
-
+                    const optionsHTML = (uniqueValues[header] || []).map(o => `<option value="${escapeHtml(o)}"></option>`).join('');
+                    fieldHTML = `<div><label>${header}</label><input type="text" name="${header}" list="${header}-datalist" value="${escapeHtml(value)}" autocomplete="off"><datalist id="${header}-datalist">${optionsHTML}</datalist></div>`;
                 } else if (specialInputTypes.hasOwnProperty(header)) {
                     const inputType = specialInputTypes[header];
                     const formattedValue = (inputType === 'date' && value) ? parseSheetDate(value) : value;
-                    fieldHTML = `<div><label for="${header}-input">${header}</label><input type="${inputType}" id="${header}-input" name="${header}" value="${escapeHtml(formattedValue)}"></div>`;
-
+                    fieldHTML = `<div><label>${header}</label><input type="${inputType}" name="${header}" value="${escapeHtml(formattedValue)}"></div>`;
+                } else if (header === dateMonthColumn) {
+                    let [currentDay, currentMonth] = value ? value.split(' ') : [1, 'January'];
+                    currentDay = parseInt(currentDay, 10);
+                    let daysOptions = ''; for (let i = 1; i <= 31; i++) daysOptions += `<option value="${i}" ${i === currentDay ? 'selected' : ''}>${String(i).padStart(2, '0')}</option>`;
+                    const monthsOptions = months.map(m => `<option value="${m}" ${m === currentMonth ? 'selected' : ''}>${m}</option>`).join('');
+                    fieldHTML = `<div data-field-name="date_month"><label>date_month</label><div class="day-month-picker"><select id="date_month-day-picker">${daysOptions}</select><select id="date_month-month-picker">${monthsOptions}</select></div></div>`;
                 } else if (header === durationDaysColumn) {
-                    let optionsHTML = '';
-                    for (let i = 0; i <= 10; i++) {
-                        const dayValue = `${i} Day${i !== 1 ? 's' : ''}`;
-                        optionsHTML += `<option value="${dayValue}" ${value === dayValue ? 'selected' : ''}>${dayValue}</option>`;
-                    }
-                    fieldHTML = `<div><label for="duration_days-input">duration_days</label><select id="duration_days-input" name="duration_days">${optionsHTML}</select></div>`;
-
+                    let optionsHTML = ''; for (let i = 0; i <= 10; i++) { const dayValue = `${i} Day${i !== 1 ? 's' : ''}`; optionsHTML += `<option value="${dayValue}" ${value === dayValue ? 'selected' : ''}>${dayValue}</option>`;}
+                    fieldHTML = `<div><label>duration_days</label><select name="duration_days">${optionsHTML}</select></div>`;
                 } else if (header === durationHoursColumn) {
-                    let currentHours = 0, currentMinutes = 0;
-                    if (value) {
-                        const hMatch = value.match(/(\d+)h/);
-                        const mMatch = value.match(/(\d+)m/);
-                        if (hMatch) currentHours = parseInt(hMatch[1], 10);
-                        if (mMatch) currentMinutes = parseInt(mMatch[1], 10);
-                    }
-                    let hoursOptions = '', minutesOptions = '';
-                    for (let i = 0; i < 24; i++) hoursOptions += `<option value="${i}" ${i === currentHours ? 'selected' : ''}>${i}h</option>`;
-                    for (let i = 0; i < 60; i++) minutesOptions += `<option value="${i}" ${i === currentMinutes ? 'selected' : ''}>${i}m</option>`;
-                    
-                    fieldHTML = `<div><label for="duration_hours-h-picker">duration_hours</label><div class="duration-picker"><select id="duration_hours-h-picker">${hoursOptions}</select><select id="duration_hours-m-picker">${minutesOptions}</select></div></div>`;
-                
+                    let [currentHours, currentMinutes] = [0, 0];
+                    if (value) { const h = value.match(/(\d+)h/); const m = value.match(/(\d+)m/); if (h) currentHours = parseInt(h[1], 10); if (m) currentMinutes = parseInt(m[1], 10);}
+                    let hoursOptions = ''; for (let i = 0; i < 24; i++) hoursOptions += `<option value="${i}" ${i === currentHours ? 'selected' : ''}>${i}h</option>`;
+                    let minutesOptions = ''; for (let i = 0; i < 60; i++) minutesOptions += `<option value="${i}" ${i === currentMinutes ? 'selected' : ''}>${i}m</option>`;
+                    fieldHTML = `<div data-field-name="duration_hours"><label>duration_hours</label><div class="duration-picker"><select id="duration_hours-h-picker">${hoursOptions}</select><select id="duration_hours-m-picker">${minutesOptions}</select></div></div>`;
                 } else {
-                    fieldHTML = `<div><label for="${header}-input">${header}</label><input type="text" id="${header}-input" name="${header}" value="${escapeHtml(value)}"></div>`;
+                    fieldHTML = `<div><label>${header}</label><input type="text" name="${header}" value="${escapeHtml(value)}"></div>`;
                 }
                 formFieldsContainer.innerHTML += fieldHTML;
             });
             
+            // Add listener to the 'type' dropdown
+            const typeSelect = formFieldsContainer.querySelector('[name="type"]');
+            if(typeSelect) {
+                typeSelect.addEventListener('change', () => updateFormVisibility(typeSelect.value));
+                // Initial visibility setup
+                updateFormVisibility(record ? record.type : typeSelect.value);
+            }
+
             modalTitle.textContent = record ? 'Edit Record' : 'Add New Record';
             rowIndexInput.value = record ? record.rowIndex : '';
-            modal.style.display = 'block';
+            dataModal.style.display = 'block';
         }
 
-        function closeModal() { modal.style.display = 'none'; }
-        
         async function handleFormSubmit(event) {
             event.preventDefault();
             saveBtn.disabled = true; saveBtn.textContent = 'Saving...';
             const formData = new FormData(dataForm);
-
-            const hoursPicker = document.getElementById('duration_hours-h-picker');
-            const minutesPicker = document.getElementById('duration_hours-m-picker');
-            if (hoursPicker && minutesPicker) {
-                const combinedDuration = `${hoursPicker.value}h ${minutesPicker.value}m`;
-                formData.set('duration_hours', combinedDuration);
-            }
-
-            for (const header in specialInputTypes) {
-                if (specialInputTypes[header] === 'date' && formData.has(header)) {
-                    const originalDate = formData.get(header);
-                    if (originalDate) {
-                        formData.set(header, formatForSheet(originalDate));
-                    }
-                }
-            }
-
-            const action = rowIndexInput.value ? 'update' : 'create';
-            formData.append('action', action);
+            if (document.getElementById('date_month-day-picker')) { formData.set('date_month', `${String(document.getElementById('date_month-day-picker').value).padStart(2, '0')} ${document.getElementById('date_month-month-picker').value}`); }
+            if (document.getElementById('duration_hours-h-picker')) { formData.set('duration_hours', `${document.getElementById('duration_hours-h-picker').value}h ${document.getElementById('duration_hours-m-picker').value}m`);}
+            for (const header in specialInputTypes) { if (specialInputTypes[header] === 'date' && formData.has(header) && formData.get(header)) { formData.set(header, formatForSheet(formData.get(header))); } }
+            formData.append('action', rowIndexInput.value ? 'update' : 'create');
             try {
                 const response = await fetch(WEB_APP_URL, { method: 'POST', body: formData });
                 const result = await response.json();
-                if (result.status === 'SUCCESS') { 
-                    closeModal(); 
-                    await fetchData(); 
-                } else { 
-                    throw new Error(result.message); 
-                }
-            } catch (error) { console.error('Error submitting form:', error); alert(`Failed to save record: ${error.message}`);
-            } finally { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+                if (result.status === 'SUCCESS') { dataModal.style.display = 'none'; await fetchData(); } 
+                else { throw new Error(result.message); }
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                showInfo('Save Error', `Failed to save record: ${error.message}`);
+            } finally {
+                saveBtn.disabled = false; saveBtn.textContent = 'Save';
+            }
         }
 
-        async function deleteRecord(rowIndex) {
-            if (!confirm('Are you sure you want to delete this record?')) return;
+        function showInfo(title, message) { infoTitle.textContent = title; infoMessage.textContent = message; infoModal.style.display = 'block'; }
+        function showDeleteConfirm(rowIndex) { confirmOkBtn.dataset.rowIndex = rowIndex; confirmModal.style.display = 'block'; }
+        async function deleteRecord() {
+            const rowIndex = confirmOkBtn.dataset.rowIndex;
+            confirmModal.style.display = 'none';
             showLoader(true);
             const formData = new FormData();
-            formData.append('action', 'delete'); formData.append('rowIndex', rowIndex);
+            formData.append('action', 'delete');
+            formData.append('rowIndex', rowIndex);
             try {
                 const response = await fetch(WEB_APP_URL, { method: 'POST', body: formData });
                 const result = await response.json();
-                if (result.status === 'SUCCESS') { 
-                    await fetchData(); 
-                } else { 
-                    throw new Error(result.message); 
-                }
-            } catch(error) { console.error('Error deleting record:', error); alert(`Failed to delete record: ${error.message}`); showLoader(false); }
+                if (result.status === 'SUCCESS') { await fetchData(); } 
+                else { throw new Error(result.message); }
+            } catch(error) {
+                console.error('Error deleting record:', error);
+                showInfo('Delete Error', `Failed to delete record: ${error.message}`);
+                showLoader(false);
+            }
         }
 
         function showLoader(show) { if (!loader || !tableWrapper) return; loader.style.display = show ? 'block' : 'none'; tableWrapper.style.display = show ? 'none' : 'block'; }
-        function escapeHtml(unsafe) { if (unsafe === null || unsafe === undefined) return ''; return String(unsafe).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
+        function escapeHtml(unsafe) { return String(unsafe || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]); }
 
-        // --- Theme Switcher Logic ---
         const themeToggle = document.getElementById('theme-toggle');
-
-        function switchTheme(e) {
-            if (e.target.checked) {
-                document.body.classList.add('dark-mode');
-                localStorage.setItem('theme', 'dark');
-            } else {
-                document.body.classList.remove('dark-mode');
-                localStorage.setItem('theme', 'light');
-            }    
-        }
-
-        themeToggle.addEventListener('change', switchTheme, false);
+        function switchTheme(e) { document.body.classList.toggle('dark-mode', e.target.checked); localStorage.setItem('theme', e.target.checked ? 'dark' : 'light'); }
+        themeToggle.addEventListener('change', switchTheme);
         const currentTheme = localStorage.getItem('theme');
-        if (currentTheme) {
-            if (currentTheme === 'dark') {
-                document.body.classList.add('dark-mode');
-                themeToggle.checked = true;
-            }
-        } else {
-            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                document.body.classList.add('dark-mode');
-                themeToggle.checked = true;
-            }
-        }
+        if (currentTheme) { themeToggle.checked = currentTheme === 'dark'; document.body.classList.toggle('dark-mode', currentTheme === 'dark'); }
+        else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) { themeToggle.checked = true; document.body.classList.add('dark-mode'); }
 
-        // --- Main Event Listeners ---
         document.addEventListener('DOMContentLoaded', fetchData);
         addNewBtn.addEventListener('click', () => openModal());
-        closeModalBtn.addEventListener('click', closeModal);
-        cancelBtn.addEventListener('click', closeModal);
-        window.addEventListener('click', (event) => { if (event.target == modal) { closeModal(); } });
+        closeModalBtn.addEventListener('click', () => dataModal.style.display = 'none');
+        cancelBtn.addEventListener('click', () => dataModal.style.display = 'none');
         dataForm.addEventListener('submit', handleFormSubmit);
-        yearFilter.addEventListener('change', () => {
-            updateDateFilter();
-            applyFilter();
-        });
+        yearFilter.addEventListener('change', () => { updateDependentFilters(); applyFilter(); });
         dateFilter.addEventListener('change', applyFilter);
+        confirmCancelBtn.addEventListener('click', () => confirmModal.style.display = 'none');
+        confirmOkBtn.addEventListener('click', deleteRecord);
+        infoOkBtn.addEventListener('click', () => infoModal.style.display = 'none');
+        infoCloseBtn.addEventListener('click', () => infoModal.style.display = 'none');
+        window.addEventListener('click', (event) => { if (event.target == dataModal) dataModal.style.display = 'none'; if (event.target == confirmModal) confirmModal.style.display = 'none'; if (event.target == infoModal) infoModal.style.display = 'none'; });
 
     </script>
 </body>
