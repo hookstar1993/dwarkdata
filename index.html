@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dwarka Poonam Data Record</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #3a86ff;
+            --secondary-color: #ffbe0b;
+            --background-color: #f0f2f5;
+            --card-background: #ffffff;
+            --text-color: #333;
+            --header-color: #444;
+            --border-color: #e0e0e0;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --border-radius: 12px;
+            --font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body.dark-mode {
+            --primary-color: #4a90e2;
+            --secondary-color: #f5a623;
+            --background-color: #1a1a1a;
+            --card-background: #2a2a2a;
+            --text-color: #e0e0e0;
+            --header-color: #f0f0f0;
+            --border-color: #444;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            background-color: var(--card-background);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: background-color 0.3s;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.6em;
+            font-weight: 600;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .add-btn {
+            background-color: rgba(255, 255, 255, 0.15);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.3s;
+        }
+
+        .add-btn:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Theme Switcher */
+        .theme-switch-wrapper {
+            display: flex;
+            align-items: center;
+        }
+        .theme-switch {
+            display: inline-block;
+            height: 24px;
+            position: relative;
+            width: 50px;
+        }
+        .theme-switch input {
+            display:none;
+        }
+        .slider {
+            background-color: rgba(0,0,0,0.2);
+            bottom: 0;
+            cursor: pointer;
+            left: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+            transition: .4s;
+        }
+        .slider:before {
+            background-color: #fff;
+            bottom: 4px;
+            content: "";
+            height: 16px;
+            left: 4px;
+            position: absolute;
+            transition: .4s;
+            width: 16px;
+        }
+        input:checked + .slider {
+            background-color: #ffffff;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+            background-color: var(--primary-color);
+        }
+        .slider.round {
+            border-radius: 34px;
+        }
+        .slider.round:before {
+            border-radius: 50%;
+        }
+
+        main {
+            padding: 30px;
+        }
+        
+        /* --- Filter Styles --- */
+        .filter-container {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: color-mix(in srgb, var(--background-color) 50%, transparent);
+            border-radius: 8px;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-group label {
+            font-weight: 500;
+            font-size: 0.95em;
+        }
+
+        .filter-group select {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--card-background);
+            color: var(--text-color);
+            font-family: var(--font-family);
+            font-size: 0.9em;
+            cursor: pointer;
+        }
+        /* --- END: Filter Styles --- */
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+            transition: background-color 0.3s;
+        }
+
+        th {
+            background-color: var(--background-color);
+            font-weight: 600;
+            color: var(--header-color);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+        
+        tr:hover {
+            background-color: rgba(0,0,0,0.02);
+        }
+        
+        body.dark-mode tr:hover {
+             background-color: rgba(255,255,255,0.05);
+        }
+
+        .actions button {
+            border: none;
+            background: none;
+            cursor: pointer;
+            padding: 5px;
+            opacity: 0.7;
+            transition: opacity 0.3s, transform 0.2s;
+        }
+
+        .actions button:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        /* --- STYLES for Sticky Column --- */
+        th.actions,
+        td.actions {
+            position: sticky;
+            right: 0;
+            z-index: 1;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.05);
+        }
+
+        body.dark-mode th.actions,
+        body.dark-mode td.actions {
+            box-shadow: -2px 0 5px rgba(0,0,0,0.3);
+        }
+        
+        th.actions {
+             background-color: var(--background-color);
+        }
+        
+        td.actions {
+            background-color: var(--card-background);
+        }
+        
+        tr:hover td.actions {
+            background-color: rgba(0,0,0,0.02);
+        }
+
+        body.dark-mode tr:hover td.actions {
+            background-color: rgba(255,255,255,0.05);
+        }
+        /* --- END of Sticky Column Styles --- */
+
+        .edit-btn svg { fill: #f39c12; }
+        .delete-btn svg { fill: #e74c3c; }
+
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.6); animation: fadeIn 0.3s; }
+        .modal-content { background-color: var(--card-background); margin: 8% auto; padding: 30px; border: 1px solid var(--border-color); width: 90%; max-width: 500px; border-radius: var(--border-radius); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); animation: slideIn 0.4s; }
+        .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; transition: color 0.3s; }
+        .close-btn:hover { color: var(--text-color); }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideIn { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        #form-fields-container { max-height: 60vh; overflow-y: auto; padding-right: 15px; }
+        form label { display: block; margin-bottom: 8px; font-weight: 500; }
+        form input, form select { 
+            width: 100%; 
+            padding: 12px; 
+            margin-bottom: 15px; 
+            border: 1px solid var(--border-color); 
+            border-radius: 8px; 
+            box-sizing: border-box; 
+            background-color: var(--background-color); 
+            color: var(--text-color); 
+            transition: border-color 0.3s, box-shadow 0.3s;
+            font-family: var(--font-family);
+            font-size: 1em;
+        }
+        form input:focus, form select:focus { 
+            outline: none; 
+            border-color: var(--primary-color); 
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 20%, transparent); 
+        }
+        .duration-picker {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .duration-picker select {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .form-actions button { padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; transition: transform 0.2s, opacity 0.3s; }
+        .form-actions button:hover { transform: translateY(-2px); opacity: 0.9; }
+        #save-btn { background-color: var(--primary-color); color: white; }
+        #cancel-btn { background-color: #ccc; }
+        
+        .loader-container { text-align: center; padding: 50px; }
+        .loader { border: 5px solid color-mix(in srgb, var(--primary-color) 20%, transparent); border-top: 5px solid var(--primary-color); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Dwarka Poonam Data Record</h1>
+            <div class="header-controls">
+                <div class="theme-switch-wrapper">
+                    <label class="theme-switch" for="theme-toggle">
+                        <input type="checkbox" id="theme-toggle" />
+                        <div class="slider round"></div>
+                    </label>
+                </div>
+                <button class="add-btn" id="addNewBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span>Add New</span>
+                </button>
+            </div>
+        </header>
+        <main>
+            <!-- UPDATED: Filter Dropdowns -->
+            <div class="filter-container">
+                <div class="filter-group">
+                    <label for="yearFilter">Filter by Year:</label>
+                    <select id="yearFilter">
+                        <option value="all">All Years</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="dateFilter">Filter by Date:</label>
+                    <select id="dateFilter">
+                        <option value="all">All Dates</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="loader" class="loader-container">
+                <div class="loader"></div>
+                <p>Loading Data...</p>
+            </div>
+            <div class="table-container" id="table-wrapper" style="display:none;">
+                <table>
+                    <thead id="data-table-head"></thead>
+                    <tbody id="data-table-body"></tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <div id="data-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="modal-title">Add New Record</h2>
+            <form id="data-form">
+                <input type="hidden" id="rowIndex" name="rowIndex">
+                <div id="form-fields-container">
+                    <!-- Dynamic form fields will be inserted here -->
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="cancel-btn">Cancel</button>
+                    <button type="submit" id="save-btn">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyjtl3u4mmtgD4KmvFE9ZrSleofoJM2SMtR1Parea8WYph6e9lsJeyV4ma6vGSx_2Nn/exec';
+
+        const tableHead = document.getElementById('data-table-head');
+        const tableBody = document.getElementById('data-table-body');
+        const loader = document.getElementById('loader');
+        const tableWrapper = document.getElementById('table-wrapper');
+        const modal = document.getElementById('data-modal');
+        const addNewBtn = document.getElementById('addNewBtn');
+        const closeModalBtn = document.querySelector('.close-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const dataForm = document.getElementById('data-form');
+        const modalTitle = document.getElementById('modal-title');
+        const rowIndexInput = document.getElementById('rowIndex');
+        const saveBtn = document.getElementById('save-btn');
+        const formFieldsContainer = document.getElementById('form-fields-container');
+        const yearFilter = document.getElementById('yearFilter');
+        const dateFilter = document.getElementById('dateFilter');
+        
+        let sheetHeaders = [];
+        let uniqueValues = {};
+        let allRecords = []; // Store all fetched records here
+
+        // --- Configuration for Form Fields ---
+        const fixedDropdownOptions = {
+            'status': ['confirmed', 'pending', 'cancelled', 'not-booked'],
+            'type': ['travel', 'stay', 'food', 'activity', 'other'],
+            'berth': ['UPPER BIRTH', 'MIDDLE BIRTH', 'LOWER BIRTH', 'SIDE UPPER', 'SIDE LOWER', 'WINDOW SEAT', 'N/A']
+        };
+        const dynamicDatalistColumns = ['guest_name', 'guest_initials', 'departure_city', 'arrival_city'];
+        const specialInputTypes = {
+            'check_in_date': 'date', 'check_out_date': 'date',
+            'start_date': 'date', 'end_date': 'date',
+            'check_in_time': 'time', 'check_out_time': 'time',
+            'start_time': 'time', 'end_time': 'time'
+        };
+        const durationDaysColumn = 'duration_days';
+        const durationHoursColumn = 'duration_hours';
+
+        // --- Date Formatting Helper Functions ---
+        const monthMap = { "January": "01", "February": "02", "March": "03", "April": "04", "May": "05", "June": "06", "July": "07", "August": "08", "September": "09", "October": "10", "November": "11", "December": "12" };
+
+        function parseSheetDate(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.replace(/,/g, '').split(' ');
+            if (parts.length < 3) return ''; 
+            const day = parts[0].padStart(2, '0');
+            const month = monthMap[parts[1]];
+            const year = parts[2];
+            if (!day || !month || !year) return '';
+            return `${year}-${month}-${day}`;
+        }
+
+        function formatForSheet(dateStr) {
+            if (!dateStr) return '';
+            const [year, month, day] = dateStr.split('-');
+            const date = new Date(year, month - 1, day);
+            const options = { day: 'numeric', month: 'long', year: 'numeric' };
+            return date.toLocaleDateString('en-US', options);
+        }
+
+        async function fetchData() {
+            showLoader(true);
+            try {
+                const response = await fetch(WEB_APP_URL);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                sheetHeaders = data.headers;
+                uniqueValues = data.uniqueValues;
+                allRecords = data.rows; 
+                
+                populateFilters(allRecords); 
+                renderTable(data.headers, allRecords); 
+
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                alert('Failed to fetch data. Make sure the Web App URL is correct and the Apps Script is updated.');
+            } finally {
+                showLoader(false);
+            }
+        }
+
+        function renderTable(headers, rows) {
+            tableHead.innerHTML = '';
+            tableBody.innerHTML = '';
+            const headerRow = document.createElement('tr');
+            headers.forEach(header => { headerRow.innerHTML += `<th>${escapeHtml(header)}</th>`; });
+            headerRow.innerHTML += `<th class="actions">Actions</th>`;
+            tableHead.appendChild(headerRow);
+            if (rows.length === 0) { tableBody.innerHTML = `<tr><td colspan="${headers.length + 1}" style="text-align:center;">No records found for the selected filter.</td></tr>`; return; }
+            rows.forEach(item => {
+                const row = document.createElement('tr');
+                let cells = '';
+                headers.forEach(header => { cells += `<td>${escapeHtml(item[header])}</td>`; });
+                row.innerHTML = cells + `
+                    <td class="actions">
+                        <button class="edit-btn" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path d="M19.769 9.923l-12.642 12.639-7.127 1.438 1.438-7.127 12.641-12.64 5.69 5.691zm1.414-1.414l2.817-2.817-5.69-5.69-2.816 2.817 5.689 5.69z"/></svg></button>
+                        <button class="delete-btn" title="Delete"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path d="M24 20.188l-8.315-8.209 8.2-8.282-3.697-3.697-8.212 8.318-8.31-8.203-3.666 3.666 8.321 8.24-8.206 8.313 3.666 3.666 8.237-8.318 8.285 8.203z"/></svg></button>
+                    </td>`;
+                row.querySelector('.edit-btn').addEventListener('click', () => openModal(item));
+                row.querySelector('.delete-btn').addEventListener('click', () => deleteRecord(item.rowIndex));
+                tableBody.appendChild(row);
+            });
+        }
+
+        // --- UPDATED: Functions for cascading filters ---
+        function populateFilters(records) {
+            const uniqueYears = [...new Set(records.map(record => record.year).filter(Boolean))].sort((a,b) => b - a); // Sort descending
+            yearFilter.innerHTML = '<option value="all">All Years</option>';
+            uniqueYears.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearFilter.appendChild(option);
+            });
+            updateDateFilter(); // Populate date filter based on default "All Years"
+        }
+        
+        function updateDateFilter() {
+            const selectedYear = yearFilter.value;
+            const recordsToUse = (selectedYear === 'all') ? allRecords : allRecords.filter(record => record.year === selectedYear);
+            
+            const uniqueDates = [...new Set(recordsToUse.map(record => record.date_month).filter(Boolean))];
+             uniqueDates.sort((a, b) => {
+                const dateA = new Date(a + " " + (selectedYear === 'all' ? new Date().getFullYear() : selectedYear));
+                const dateB = new Date(b + " " + (selectedYear === 'all' ? new Date().getFullYear() : selectedYear));
+                if (isNaN(dateA)) return 1; 
+                if (isNaN(dateB)) return -1;
+                return dateA - dateB;
+            });
+
+            dateFilter.innerHTML = '<option value="all">All Dates</option>';
+            uniqueDates.forEach(date => {
+                const option = document.createElement('option');
+                option.value = date;
+                option.textContent = date;
+                dateFilter.appendChild(option);
+            });
+        }
+        
+        function applyFilter() {
+            const selectedYear = yearFilter.value;
+            const selectedDate = dateFilter.value;
+            let filteredRecords = allRecords;
+
+            if (selectedYear !== 'all') {
+                filteredRecords = filteredRecords.filter(record => record.year === selectedYear);
+            }
+            if (selectedDate !== 'all') {
+                filteredRecords = filteredRecords.filter(record => record.date_month === selectedDate);
+            }
+            renderTable(sheetHeaders, filteredRecords);
+        }
+        
+        function openModal(record = null) {
+            dataForm.reset();
+            formFieldsContainer.innerHTML = '';
+            
+            sheetHeaders.forEach(header => {
+                const value = record ? record[header] : '';
+                let fieldHTML = '';
+
+                if (fixedDropdownOptions.hasOwnProperty(header)) {
+                    const options = fixedDropdownOptions[header];
+                    const optionsHTML = options.map(option => `<option value="${escapeHtml(option)}" ${value === option ? 'selected' : ''}>${escapeHtml(option)}</option>`).join('');
+                    fieldHTML = `<div><label for="${header}-input">${header}</label><select id="${header}-input" name="${header}">${optionsHTML}</select></div>`;
+                
+                } else if (dynamicDatalistColumns.includes(header)) {
+                    const options = uniqueValues[header] || [];
+                    const datalistId = `${header}-datalist`;
+                    const optionsHTML = options.map(opt => `<option value="${escapeHtml(opt)}"></option>`).join('');
+                    fieldHTML = `<div><label for="${header}-input">${header}</label><input type="text" id="${header}-input" name="${header}" list="${datalistId}" value="${escapeHtml(value)}" autocomplete="off"><datalist id="${datalistId}">${optionsHTML}</datalist></div>`;
+
+                } else if (specialInputTypes.hasOwnProperty(header)) {
+                    const inputType = specialInputTypes[header];
+                    const formattedValue = (inputType === 'date' && value) ? parseSheetDate(value) : value;
+                    fieldHTML = `<div><label for="${header}-input">${header}</label><input type="${inputType}" id="${header}-input" name="${header}" value="${escapeHtml(formattedValue)}"></div>`;
+
+                } else if (header === durationDaysColumn) {
+                    let optionsHTML = '';
+                    for (let i = 0; i <= 10; i++) {
+                        const dayValue = `${i} Day${i !== 1 ? 's' : ''}`;
+                        optionsHTML += `<option value="${dayValue}" ${value === dayValue ? 'selected' : ''}>${dayValue}</option>`;
+                    }
+                    fieldHTML = `<div><label for="duration_days-input">duration_days</label><select id="duration_days-input" name="duration_days">${optionsHTML}</select></div>`;
+
+                } else if (header === durationHoursColumn) {
+                    let currentHours = 0, currentMinutes = 0;
+                    if (value) {
+                        const hMatch = value.match(/(\d+)h/);
+                        const mMatch = value.match(/(\d+)m/);
+                        if (hMatch) currentHours = parseInt(hMatch[1], 10);
+                        if (mMatch) currentMinutes = parseInt(mMatch[1], 10);
+                    }
+                    let hoursOptions = '', minutesOptions = '';
+                    for (let i = 0; i < 24; i++) hoursOptions += `<option value="${i}" ${i === currentHours ? 'selected' : ''}>${i}h</option>`;
+                    for (let i = 0; i < 60; i++) minutesOptions += `<option value="${i}" ${i === currentMinutes ? 'selected' : ''}>${i}m</option>`;
+                    
+                    fieldHTML = `<div><label for="duration_hours-h-picker">duration_hours</label><div class="duration-picker"><select id="duration_hours-h-picker">${hoursOptions}</select><select id="duration_hours-m-picker">${minutesOptions}</select></div></div>`;
+                
+                } else {
+                    fieldHTML = `<div><label for="${header}-input">${header}</label><input type="text" id="${header}-input" name="${header}" value="${escapeHtml(value)}"></div>`;
+                }
+                formFieldsContainer.innerHTML += fieldHTML;
+            });
+            
+            modalTitle.textContent = record ? 'Edit Record' : 'Add New Record';
+            rowIndexInput.value = record ? record.rowIndex : '';
+            modal.style.display = 'block';
+        }
+
+        function closeModal() { modal.style.display = 'none'; }
+        
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+            saveBtn.disabled = true; saveBtn.textContent = 'Saving...';
+            const formData = new FormData(dataForm);
+
+            const hoursPicker = document.getElementById('duration_hours-h-picker');
+            const minutesPicker = document.getElementById('duration_hours-m-picker');
+            if (hoursPicker && minutesPicker) {
+                const combinedDuration = `${hoursPicker.value}h ${minutesPicker.value}m`;
+                formData.set('duration_hours', combinedDuration);
+            }
+
+            for (const header in specialInputTypes) {
+                if (specialInputTypes[header] === 'date' && formData.has(header)) {
+                    const originalDate = formData.get(header);
+                    if (originalDate) {
+                        formData.set(header, formatForSheet(originalDate));
+                    }
+                }
+            }
+
+            const action = rowIndexInput.value ? 'update' : 'create';
+            formData.append('action', action);
+            try {
+                const response = await fetch(WEB_APP_URL, { method: 'POST', body: formData });
+                const result = await response.json();
+                if (result.status === 'SUCCESS') { 
+                    closeModal(); 
+                    await fetchData(); 
+                } else { 
+                    throw new Error(result.message); 
+                }
+            } catch (error) { console.error('Error submitting form:', error); alert(`Failed to save record: ${error.message}`);
+            } finally { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+        }
+
+        async function deleteRecord(rowIndex) {
+            if (!confirm('Are you sure you want to delete this record?')) return;
+            showLoader(true);
+            const formData = new FormData();
+            formData.append('action', 'delete'); formData.append('rowIndex', rowIndex);
+            try {
+                const response = await fetch(WEB_APP_URL, { method: 'POST', body: formData });
+                const result = await response.json();
+                if (result.status === 'SUCCESS') { 
+                    await fetchData(); 
+                } else { 
+                    throw new Error(result.message); 
+                }
+            } catch(error) { console.error('Error deleting record:', error); alert(`Failed to delete record: ${error.message}`); showLoader(false); }
+        }
+
+        function showLoader(show) { if (!loader || !tableWrapper) return; loader.style.display = show ? 'block' : 'none'; tableWrapper.style.display = show ? 'none' : 'block'; }
+        function escapeHtml(unsafe) { if (unsafe === null || unsafe === undefined) return ''; return String(unsafe).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
+
+        // --- Theme Switcher Logic ---
+        const themeToggle = document.getElementById('theme-toggle');
+
+        function switchTheme(e) {
+            if (e.target.checked) {
+                document.body.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.body.classList.remove('dark-mode');
+                localStorage.setItem('theme', 'light');
+            }    
+        }
+
+        themeToggle.addEventListener('change', switchTheme, false);
+        const currentTheme = localStorage.getItem('theme');
+        if (currentTheme) {
+            if (currentTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+                themeToggle.checked = true;
+            }
+        } else {
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.body.classList.add('dark-mode');
+                themeToggle.checked = true;
+            }
+        }
+
+        // --- Main Event Listeners ---
+        document.addEventListener('DOMContentLoaded', fetchData);
+        addNewBtn.addEventListener('click', () => openModal());
+        closeModalBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+        window.addEventListener('click', (event) => { if (event.target == modal) { closeModal(); } });
+        dataForm.addEventListener('submit', handleFormSubmit);
+        yearFilter.addEventListener('change', () => {
+            updateDateFilter();
+            applyFilter();
+        });
+        dateFilter.addEventListener('change', applyFilter);
+
+    </script>
+</body>
+</html>
+
