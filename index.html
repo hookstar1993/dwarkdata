@@ -194,6 +194,7 @@
 
         .edit-btn svg { fill: #f39c12; }
         .delete-btn svg { fill: var(--danger-color); }
+        .duplicate-btn svg { fill: var(--info-color); }
 
         /* Modal Styles */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.6); animation: fadeIn 0.3s; }
@@ -218,6 +219,7 @@
         #save-btn { background-color: var(--primary-color); color: white; position: relative; min-width: 90px; }
         #cancel-btn, #confirm-cancel-btn { background-color: #ccc; }
         #confirm-ok-btn { background-color: var(--danger-color); color: white; }
+        #confirm-ok-btn.duplicate { background-color: var(--info-color); }
         
         /* Loader Styles */
         .loader-container { text-align: center; padding: 50px; }
@@ -293,11 +295,11 @@
     </div>
     <div id="confirm-modal" class="modal">
         <div class="modal-content">
-            <h2 id="confirm-title">Confirm Deletion</h2>
-            <p id="confirm-message">Are you sure you want to delete this record? This action cannot be undone.</p>
+            <h2 id="confirm-title">Confirm Action</h2>
+            <p id="confirm-message">Are you sure?</p>
             <div class="form-actions">
                 <button type="button" id="confirm-cancel-btn">Cancel</button>
-                <button type="button" id="confirm-ok-btn">Yes, Delete</button>
+                <button type="button" id="confirm-ok-btn">Yes</button>
             </div>
         </div>
     </div>
@@ -313,7 +315,7 @@
     </div>
 
     <script>
-        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyW4bGoajICFF5pbKtatUQAZPtnaeQj5H1DGoM1y8NS5xlQ-Yhz8uAG-Z-EKLj68-8w/exec';
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzMeXXivbV3ZYlGM69b4TZuSzGBaX0VwSCRmHkXCO_JU92RHfHEFcDKQJ0NvYbuL-q1/exec';
 
         // --- Get All Elements ---
         const tableHead = document.getElementById('data-table-head');
@@ -356,6 +358,7 @@
         const durationHoursColumn = 'duration_hours';
         const dateMonthColumn = 'date_month';
         const monthMap = { "January": 1, "February": 2, "March": 3, "April": 4, "May": 5, "June": 6, "July": 7, "August": 8, "September": 9, "October": 10, "November": 11, "December": 12 };
+        const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         
         const formFieldConfig = {
             'stay': ['date_month','year','type','status','name','booking_no_pnr','check_in_date','check_in_time','check_out_date','check_out_time','duration_days','duration_hours','guest_name','guest_initials','fare','pdf_link'],
@@ -370,7 +373,7 @@
             records.sort((a, b) => {
                 const yearA = parseInt(a.year, 10) || 0;
                 const yearB = parseInt(b.year, 10) || 0;
-                if (yearB !== yearA) return yearB - yearA; // Sort by year descending
+                if (yearB !== yearA) return yearB - yearA;
 
                 try {
                     const [dayA, monthStrA] = a.date_month.split(' ');
@@ -378,10 +381,10 @@
                     const monthA = monthMap[monthStrA];
                     const monthB = monthMap[monthStrB];
                     
-                    if (monthB !== monthA) return monthB - monthA; // Sort by month descending
-                    return parseInt(dayB, 10) - parseInt(dayA, 10); // Sort by day descending
+                    if (monthB !== monthA) return monthB - monthA;
+                    return parseInt(dayB, 10) - parseInt(dayA, 10);
                 } catch (e) {
-                    return 0; // Fallback if date format is unexpected
+                    return 0; // Return 0 if dates are malformed, keeping original order
                 }
             });
         }
@@ -409,8 +412,8 @@
             } catch (error) {
                 console.error('Error fetching data:', error);
                 showInfo(
-                    'Connection Error', 
-                    `Failed to connect to the server. This is a critical error. The most common cause is incorrect deployment settings in your Google Apps Script. Please open your script, go to Deploy > Manage Deployments, edit your deployment, and ensure 'Who has access' is set to 'Anyone'. Technical details: ${error.message}`
+                    'Connection Failed', 
+                    `Could not connect to the database. Please check your Google Apps Script deployment settings and make sure 'Who has access' is set to 'Anyone'.`
                 );
             } finally {
                 showLoader(false);
@@ -430,13 +433,13 @@
             
             if (rows.length === 0) { tableBody.innerHTML = `<tr><td colspan="${headers.length + 1}" style="text-align:center;">No records found.</td></tr>`; return; }
             
-            let lastMonth = null;
+            let lastDate = null;
             let colorIndex = 0;
             rows.forEach(item => {
-                const currentMonth = item[dateMonthColumn];
-                if (currentMonth !== lastMonth) {
+                const currentDate = item[dateMonthColumn];
+                if (currentDate !== lastDate) {
                     colorIndex = (colorIndex + 1) % 2;
-                    lastMonth = currentMonth;
+                    lastDate = currentDate;
                 }
                 const row = document.createElement('tr');
                 row.classList.add(`color-group-${colorIndex + 1}`);
@@ -445,9 +448,11 @@
                 row.innerHTML = cells + `
                     <td class="actions">
                         <button class="edit-btn" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#f39c12" d="M19.769 9.923l-12.642 12.639-7.127 1.438 1.438-7.127 12.641-12.64 5.69 5.691zm1.414-1.414l2.817-2.817-5.69-5.69-2.816 2.817 5.689 5.69z"/></svg></button>
+                        <button class="duplicate-btn" title="Duplicate"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="var(--info-color)" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></button>
                         <button class="delete-btn" title="Delete"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="var(--danger-color)" d="M24 20.188l-8.315-8.209 8.2-8.282-3.697-3.697-8.212 8.318-8.31-8.203-3.666 3.666 8.321 8.24-8.206 8.313 3.666 3.666 8.237-8.318 8.285 8.203z"/></svg></button>
                     </td>`;
                 row.querySelector('.edit-btn').addEventListener('click', () => openModal(item));
+                row.querySelector('.duplicate-btn').addEventListener('click', () => showDuplicateConfirm(item.rowIndex));
                 row.querySelector('.delete-btn').addEventListener('click', () => showDeleteConfirm(item.rowIndex));
                 tableBody.appendChild(row);
             });
@@ -557,7 +562,14 @@
                 else { throw new Error(result.message || 'An unknown server error occurred.'); }
             } catch (error) {
                 console.error('Error submitting form:', error);
-                showInfo('Save Error', `Failed to save record: ${error.message}`);
+                if (error.message.includes('Failed to fetch')) {
+                    showInfo(
+                        'Connection Failed', 
+                        `Could not submit data to the server. Please check your internet connection and ensure your Google Apps Script is deployed correctly with 'Who has access' set to 'Anyone'.`
+                    );
+                } else {
+                    showInfo('Save Error', `Failed to save record: ${error.message}`);
+                }
             } finally {
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = originalButtonContent;
@@ -565,10 +577,27 @@
         }
 
         function showDeleteConfirm(rowIndex) {
+            confirmTitle.textContent = 'Confirm Deletion';
+            confirmMessage.textContent = 'Are you sure you want to delete this record? This action cannot be undone.';
+            confirmOkBtn.textContent = 'Yes, Delete';
             confirmOkBtn.dataset.rowIndex = rowIndex;
+            confirmOkBtn.dataset.action = 'delete';
+            confirmOkBtn.className = ''; // Reset class
+            confirmOkBtn.classList.add('delete');
             confirmModal.style.display = 'block';
         }
 
+        function showDuplicateConfirm(rowIndex) {
+            confirmTitle.textContent = 'Confirm Duplication';
+            confirmMessage.textContent = 'Are you sure you want to duplicate this record? A new entry will be added to the end of the sheet.';
+            confirmOkBtn.textContent = 'Yes, Duplicate';
+            confirmOkBtn.dataset.rowIndex = rowIndex;
+            confirmOkBtn.dataset.action = 'duplicate';
+            confirmOkBtn.className = ''; // Reset class
+            confirmOkBtn.classList.add('duplicate');
+            confirmModal.style.display = 'block';
+        }
+        
         async function performAction(formData, actionName) {
             confirmModal.style.display = 'none';
             showLoader(true);
@@ -583,14 +612,21 @@
                 }
             } catch(error) {
                 console.error(`Error during ${actionName}:`, error);
-                showInfo(`${actionName} Error`, `Failed to ${actionName.toLowerCase()} record: ${error.message}`);
+                if (error.message.includes('Failed to fetch')) {
+                     showInfo(
+                        'Connection Failed', 
+                        `Could not perform action. Please check your internet connection and ensure your Google Apps Script is deployed correctly with 'Who has access' set to 'Anyone'.`
+                    );
+                } else {
+                    showInfo(`${actionName} Error`, `Failed to ${actionName.toLowerCase()} record: ${error.message}`);
+                }
             } finally {
                 if (loader.style.display === 'block') {
                     showLoader(false);
                 }
             }
         }
-
+        
         async function deleteRecord() {
             const rowIndex = confirmOkBtn.dataset.rowIndex;
             const formData = new FormData();
@@ -599,9 +635,17 @@
             await performAction(formData, 'Delete');
         }
 
+        async function duplicateRecord() {
+            const rowIndex = confirmOkBtn.dataset.rowIndex;
+            const formData = new FormData();
+            formData.append('action', 'duplicate');
+            formData.append('rowIndex', rowIndex);
+            await performAction(formData, 'Duplicate');
+        }
+
         function showInfo(title, message) { infoTitle.textContent = title; infoMessage.textContent = message; infoModal.style.display = 'block'; }
         function showLoader(show) { if (!loader || !tableWrapper) return; loader.style.display = show ? 'block' : 'none'; tableWrapper.style.display = show ? 'none' : 'block'; }
-        function escapeHtml(unsafe) { return String(unsafe || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]); }
+        function escapeHtml(unsafe) { return String(unsafe || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#0-39;'})[m]); }
 
         // --- Theme Switcher Logic ---
         const themeToggle = document.getElementById('theme-toggle');
@@ -620,7 +664,14 @@
         yearFilter.addEventListener('change', () => { updateDateFilter(); applyFilter(); });
         dateFilter.addEventListener('change', applyFilter);
         confirmCancelBtn.addEventListener('click', () => confirmModal.style.display = 'none');
-        confirmOkBtn.addEventListener('click', deleteRecord);
+        confirmOkBtn.addEventListener('click', (e) => {
+            const action = e.target.dataset.action;
+            if (action === 'delete') {
+                deleteRecord();
+            } else if (action === 'duplicate') {
+                duplicateRecord();
+            }
+        });
         infoOkBtn.addEventListener('click', () => infoModal.style.display = 'none');
         infoCloseBtn.addEventListener('click', () => infoModal.style.display = 'none');
         window.addEventListener('click', (event) => { if (event.target == dataModal) dataModal.style.display = 'none'; if (event.target == confirmModal) confirmModal.style.display = 'none'; if (event.target == infoModal) infoModal.style.display = 'none'; });
