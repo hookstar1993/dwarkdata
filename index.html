@@ -17,6 +17,7 @@
             --header-color: #444;
             --border-color: #e0e0e0;
             --danger-color: #e74c3c;
+            --info-color: #3498db;
             --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
             --border-radius: 12px;
             --font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -31,6 +32,7 @@
             --header-color: #f0f0f0;
             --border-color: #444;
             --danger-color: #f15b4c;
+            --info-color: #5dade2;
             --shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
         }
 
@@ -161,7 +163,7 @@
             border-bottom: none;
         }
 
-        /* Styles for Row Coloring by Month - UPDATED with solid colors */
+        /* Styles for Row Coloring by Month */
         .color-group-1 { background-color: var(--card-background); }
         .color-group-2 { background-color: color-mix(in srgb, var(--primary-color) 8%, var(--card-background)); }
         tr.color-group-1:hover, tr.color-group-1:hover td.actions { background-color: color-mix(in srgb, var(--text-color) 5%, var(--card-background)); }
@@ -186,7 +188,7 @@
         body.dark-mode th.actions, body.dark-mode td.actions { box-shadow: -2px 0 5px rgba(0,0,0,0.3); }
         th.actions { background-color: var(--background-color); }
         
-        /* FIX: Explicitly set background for sticky action cells to prevent overlap - UPDATED with solid colors */
+        /* FIX: Explicitly set background for sticky action cells to prevent overlap */
         .color-group-1 td.actions { background-color: var(--card-background); }
         .color-group-2 td.actions { background-color: color-mix(in srgb, var(--primary-color) 8%, var(--card-background)); }
 
@@ -257,7 +259,6 @@
                 </div>
             </div>
             
-            <!-- NEW: Record Count Display -->
             <div class="record-summary">
                 <p id="record-count-display"></p>
             </div>
@@ -331,6 +332,8 @@
         const yearFilter = document.getElementById('yearFilter');
         const dateFilter = document.getElementById('dateFilter');
         const confirmModal = document.getElementById('confirm-modal');
+        const confirmTitle = document.getElementById('confirm-title');
+        const confirmMessage = document.getElementById('confirm-message');
         const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
         const confirmOkBtn = document.getElementById('confirm-ok-btn');
         const infoModal = document.getElementById('info-modal');
@@ -352,8 +355,7 @@
         const durationDaysColumn = 'duration_days';
         const durationHoursColumn = 'duration_hours';
         const dateMonthColumn = 'date_month';
-        const monthMap = { "January": "01", "February": "02", "March": "03", "April": "04", "May": "05", "June": "06", "July": "07", "August": "08", "September": "09", "October": "10", "November": "11", "December": "12" };
-        const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const monthMap = { "January": 1, "February": 2, "March": 3, "April": 4, "May": 5, "June": 6, "July": 7, "August": 8, "September": 9, "October": 10, "November": 11, "December": 12 };
         
         const formFieldConfig = {
             'stay': ['date_month','year','type','status','name','booking_no_pnr','check_in_date','check_in_time','check_out_date','check_out_time','duration_days','duration_hours','guest_name','guest_initials','fare','pdf_link'],
@@ -361,26 +363,25 @@
         };
 
         // --- Helper Functions ---
-        function parseSheetDate(dateStr) { if (!dateStr) return ''; const parts = dateStr.replace(/,/g, '').split(' '); if (parts.length < 3) return ''; const day = parts[0].padStart(2, '0'); const month = monthMap[parts[1]]; const year = parts[2]; if (!day || !month || !year) return ''; return `${year}-${month}-${day}`; }
+        function parseSheetDate(dateStr) { if (!dateStr) return ''; const parts = dateStr.replace(/,/g, '').split(' '); if (parts.length < 3) return ''; const day = parts[0].padStart(2, '0'); const month = String(monthMap[parts[1]]).padStart(2, '0'); const year = parts[2]; if (!day || !month || !year) return ''; return `${year}-${month}-${day}`; }
         function formatForSheet(dateStr) { if (!dateStr) return ''; const [year, month, day] = dateStr.split('-'); const date = new Date(year, month - 1, day); return date.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }); }
 
-        // NEW: Function to sort records by year and date
         function sortRecords(records) {
             records.sort((a, b) => {
                 const yearA = parseInt(a.year, 10) || 0;
                 const yearB = parseInt(b.year, 10) || 0;
-                
-                if (yearB !== yearA) {
-                    return yearB - yearA; // Sort by year descending
-                }
+                if (yearB !== yearA) return yearB - yearA; // Sort by year descending
 
-                // If years are the same, sort by date_month ascending
                 try {
-                    const dateA = new Date(a.date_month + ", " + yearA);
-                    const dateB = new Date(b.date_month + ", " + yearB);
-                    return dateA - dateB;
+                    const [dayA, monthStrA] = a.date_month.split(' ');
+                    const [dayB, monthStrB] = b.date_month.split(' ');
+                    const monthA = monthMap[monthStrA];
+                    const monthB = monthMap[monthStrB];
+                    
+                    if (monthB !== monthA) return monthB - monthA; // Sort by month descending
+                    return parseInt(dayB, 10) - parseInt(dayA, 10); // Sort by day descending
                 } catch (e) {
-                    return a.date_month.localeCompare(b.date_month); // Fallback sort
+                    return 0; // Fallback if date format is unexpected
                 }
             });
         }
@@ -389,21 +390,28 @@
         async function fetchData() {
             showLoader(true);
             try {
-                const response = await fetch(WEB_APP_URL);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const response = await fetch(WEB_APP_URL, { method: 'GET', mode: 'cors', redirect: 'follow' });
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Server responded with an error:', response.status, errorText);
+                    throw new Error(`Server error (${response.status}). Check browser console for details.`);
+                }
                 const data = await response.json();
+                if (data.status === 'ERROR') {
+                    throw new Error(data.message);
+                }
                 sheetHeaders = data.headers;
                 uniqueValues = data.uniqueValues;
                 allRecords = data.rows; 
-                
-                // NEW: Sort all records initially to group them by date
                 sortRecords(allRecords);
-
                 populateFilters(allRecords); 
                 renderTable(sheetHeaders, allRecords); 
             } catch (error) {
                 console.error('Error fetching data:', error);
-                showInfo('Fetch Error', 'Failed to fetch data. Please check your internet connection and the Web App URL.');
+                showInfo(
+                    'Connection Error', 
+                    `Failed to connect to the server. This is a critical error. The most common cause is incorrect deployment settings in your Google Apps Script. Please open your script, go to Deploy > Manage Deployments, edit your deployment, and ensure 'Who has access' is set to 'Anyone'. Technical details: ${error.message}`
+                );
             } finally {
                 showLoader(false);
             }
@@ -412,41 +420,32 @@
         function renderTable(headers, rows) {
             tableHead.innerHTML = '';
             tableBody.innerHTML = '';
-
-            // UPDATED: Display Record Count
             const totalRecords = allRecords.length;
-            if (rows.length === totalRecords) {
-                recordCountDisplay.textContent = `Displaying all ${totalRecords} records.`;
-            } else {
-                recordCountDisplay.textContent = `Displaying ${rows.length} of ${totalRecords} records.`;
-            }
-
+            recordCountDisplay.textContent = (rows.length === totalRecords) ? `Displaying all ${totalRecords} records.` : `Displaying ${rows.length} of ${totalRecords} records.`;
+            
             const headerRow = document.createElement('tr');
             headers.forEach(header => { headerRow.innerHTML += `<th>${escapeHtml(header)}</th>`; });
             headerRow.innerHTML += `<th class="actions">Actions</th>`;
             tableHead.appendChild(headerRow);
-            if (rows.length === 0) { tableBody.innerHTML = `<tr><td colspan="${headers.length + 1}" style="text-align:center;">No records found for the selected filter.</td></tr>`; return; }
             
-            // UPDATED: Logic for Row Coloring by Month
+            if (rows.length === 0) { tableBody.innerHTML = `<tr><td colspan="${headers.length + 1}" style="text-align:center;">No records found.</td></tr>`; return; }
+            
             let lastMonth = null;
             let colorIndex = 0;
-
             rows.forEach(item => {
                 const currentMonth = item[dateMonthColumn];
                 if (currentMonth !== lastMonth) {
-                    colorIndex = (colorIndex + 1) % 2; // Alternates between 0 and 1
+                    colorIndex = (colorIndex + 1) % 2;
                     lastMonth = currentMonth;
                 }
-
                 const row = document.createElement('tr');
-                row.classList.add(`color-group-${colorIndex + 1}`); // Add class for color
-
+                row.classList.add(`color-group-${colorIndex + 1}`);
                 let cells = '';
                 headers.forEach(header => { cells += `<td>${escapeHtml(item[header])}</td>`; });
                 row.innerHTML = cells + `
                     <td class="actions">
-                        <button class="edit-btn" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path d="M19.769 9.923l-12.642 12.639-7.127 1.438 1.438-7.127 12.641-12.64 5.69 5.691zm1.414-1.414l2.817-2.817-5.69-5.69-2.816 2.817 5.689 5.69z"/></svg></button>
-                        <button class="delete-btn" title="Delete"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path d="M24 20.188l-8.315-8.209 8.2-8.282-3.697-3.697-8.212 8.318-8.31-8.203-3.666 3.666 8.321 8.24-8.206 8.313 3.666 3.666 8.237-8.318 8.285 8.203z"/></svg></button>
+                        <button class="edit-btn" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#f39c12" d="M19.769 9.923l-12.642 12.639-7.127 1.438 1.438-7.127 12.641-12.64 5.69 5.691zm1.414-1.414l2.817-2.817-5.69-5.69-2.816 2.817 5.689 5.69z"/></svg></button>
+                        <button class="delete-btn" title="Delete"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="var(--danger-color)" d="M24 20.188l-8.315-8.209 8.2-8.282-3.697-3.697-8.212 8.318-8.31-8.203-3.666 3.666 8.321 8.24-8.206 8.313 3.666 3.666 8.237-8.318 8.285 8.203z"/></svg></button>
                     </td>`;
                 row.querySelector('.edit-btn').addEventListener('click', () => openModal(item));
                 row.querySelector('.delete-btn').addEventListener('click', () => showDeleteConfirm(item.rowIndex));
@@ -464,14 +463,15 @@
         function updateDateFilter() {
             const selectedYear = yearFilter.value;
             const recordsToUse = (selectedYear === 'all') ? allRecords : allRecords.filter(record => String(record.year) === selectedYear);
-            const uniqueDates = [...new Set(recordsToUse.map(record => record.date_month).filter(Boolean))];
-            uniqueDates.sort((a, b) => {
-                const dateA = new Date(a + " 1, 2000"); // Use a dummy year for sorting months
-                const dateB = new Date(b + " 1, 2000");
-                return dateA - dateB;
+            const dateMonthValues = [...new Set(recordsToUse.map(r => r.date_month).filter(Boolean))];
+            
+            dateMonthValues.sort((a, b) => {
+                const monthA = monthMap[a.split(' ')[1]];
+                const monthB = monthMap[b.split(' ')[1]];
+                return monthB - monthA;
             });
             dateFilter.innerHTML = '<option value="all">All Dates</option>';
-            uniqueDates.forEach(date => dateFilter.add(new Option(date, date)));
+            dateMonthValues.forEach(date => dateFilter.add(new Option(date, date)));
         }
         
         function applyFilter() {
@@ -487,23 +487,20 @@
             const fieldsToShow = formFieldConfig[selectedType] || sheetHeaders;
             const allFormFields = formFieldsContainer.querySelectorAll('div[data-field-name]');
             allFormFields.forEach(fieldDiv => {
-                const fieldName = fieldDiv.dataset.fieldName;
-                fieldDiv.style.display = fieldsToShow.includes(fieldName) ? 'block' : 'none';
+                fieldDiv.style.display = fieldsToShow.includes(fieldDiv.dataset.fieldName) ? 'block' : 'none';
             });
         }
 
         function openModal(record = null) {
             dataForm.reset();
             formFieldsContainer.innerHTML = '';
-            
             sheetHeaders.forEach(header => {
                 const value = record ? record[header] : '';
                 let fieldHTML = '';
-                const isRequired = ['year', 'type', 'status', 'name'].includes(header); // UPDATED: Fields for validation
-
+                const isRequired = ['year', 'type', 'status', 'name'].includes(header);
                 if (fixedDropdownOptions.hasOwnProperty(header)) {
                     const optionsHTML = fixedDropdownOptions[header].map(o => `<option value="${escapeHtml(o)}" ${value === o ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('');
-                    fieldHTML = `<div data-field-name="${header}"><label>${header}</label><select name="${header}" ${isRequired ? 'required' : ''}>${optionsHTML}</select></div>`;
+                    fieldHTML = `<div data-field-name="${header}"><label>${header}</label><select name="${header}" ${isRequired ? 'required' : ''}><option value=""></option>${optionsHTML}</select></div>`;
                 } else if (dynamicDatalistColumns.includes(header)) {
                     const optionsHTML = (uniqueValues[header] || []).map(o => `<option value="${escapeHtml(o)}"></option>`).join('');
                     fieldHTML = `<div data-field-name="${header}"><label>${header}</label><input type="text" name="${header}" list="${header}-datalist" value="${escapeHtml(value)}" autocomplete="off" ${isRequired ? 'required' : ''}><datalist id="${header}-datalist">${optionsHTML}</datalist></div>`;
@@ -515,7 +512,7 @@
                     let [currentDay, currentMonth] = value ? value.split(' ') : ['01', 'January'];
                     currentDay = parseInt(currentDay, 10);
                     let daysOptions = ''; for (let i = 1; i <= 31; i++) daysOptions += `<option value="${i}" ${i === currentDay ? 'selected' : ''}>${String(i).padStart(2, '0')}</option>`;
-                    const monthsOptions = months.map(m => `<option value="${m}" ${m === currentMonth ? 'selected' : ''}>${m}</option>`).join('');
+                    const monthsOptions = Object.keys(monthMap).map(m => `<option value="${m}" ${m === currentMonth ? 'selected' : ''}>${m}</option>`).join('');
                     fieldHTML = `<div data-field-name="date_month"><label>date_month</label><div class="day-month-picker"><select id="date_month-day-picker">${daysOptions}</select><select id="date_month-month-picker">${monthsOptions}</select></div></div>`;
                 } else if (header === durationDaysColumn) {
                     let optionsHTML = ''; for (let i = 0; i <= 10; i++) { const dayValue = `${i} Day${i !== 1 ? 's' : ''}`; optionsHTML += `<option value="${dayValue}" ${value === dayValue ? 'selected' : ''}>${dayValue}</option>`;}
@@ -531,13 +528,11 @@
                 }
                 formFieldsContainer.innerHTML += fieldHTML;
             });
-            
             const typeSelect = formFieldsContainer.querySelector('[name="type"]');
             if(typeSelect) {
                 typeSelect.addEventListener('change', () => updateFormVisibility(typeSelect.value));
                 updateFormVisibility(record ? record.type : typeSelect.value);
             }
-
             modalTitle.textContent = record ? 'Edit Record' : 'Add New Record';
             rowIndexInput.value = record ? record.rowIndex : '';
             dataModal.style.display = 'block';
@@ -545,34 +540,21 @@
 
         async function handleFormSubmit(event) {
             event.preventDefault();
-
-            // UPDATED: Better Form Validation
-            if (!dataForm.checkValidity()) {
-                dataForm.reportValidity(); // Shows browser's native validation hints
-                return;
-            }
-
-            // UPDATED: Improved Loading Indicator
+            if (!dataForm.checkValidity()) { dataForm.reportValidity(); return; }
             saveBtn.disabled = true;
             const originalButtonContent = saveBtn.innerHTML;
             saveBtn.innerHTML = '<div class="btn-loader"></div>';
-
             const formData = new FormData(dataForm);
             if (document.getElementById('date_month-day-picker')) { formData.set('date_month', `${String(document.getElementById('date_month-day-picker').value).padStart(2, '0')} ${document.getElementById('date_month-month-picker').value}`); }
             if (document.getElementById('duration_hours-h-picker')) { formData.set('duration_hours', `${document.getElementById('duration_hours-h-picker').value}h ${document.getElementById('duration_hours-m-picker').value}m`);}
             for (const header in specialInputTypes) { if (specialInputTypes[header] === 'date' && formData.has(header) && formData.get(header)) { formData.set(header, formatForSheet(formData.get(header))); } }
             formData.append('action', rowIndexInput.value ? 'update' : 'create');
-            
             try {
-                const response = await fetch(WEB_APP_URL, { method: 'POST', body: formData });
+                const response = await fetch(WEB_APP_URL, { method: 'POST', body: formData, mode: 'cors' });
+                if (!response.ok) throw new Error(`Server error (${response.status})`);
                 const result = await response.json();
-                if (result.status === 'SUCCESS') {
-                    dataModal.style.display = 'none';
-                    await fetchData();
-                } else {
-                    // UPDATED: More Specific Error Messages
-                    throw new Error(result.message || 'An unknown server error occurred.');
-                }
+                if (result.status === 'SUCCESS') { dataModal.style.display = 'none'; await fetchData(); } 
+                else { throw new Error(result.message || 'An unknown server error occurred.'); }
             } catch (error) {
                 console.error('Error submitting form:', error);
                 showInfo('Save Error', `Failed to save record: ${error.message}`);
@@ -582,27 +564,42 @@
             }
         }
 
-        async function deleteRecord() {
-            const rowIndex = confirmOkBtn.dataset.rowIndex;
+        function showDeleteConfirm(rowIndex) {
+            confirmOkBtn.dataset.rowIndex = rowIndex;
+            confirmModal.style.display = 'block';
+        }
+
+        async function performAction(formData, actionName) {
             confirmModal.style.display = 'none';
             showLoader(true);
-            const formData = new FormData();
-            formData.append('action', 'delete');
-            formData.append('rowIndex', rowIndex);
             try {
-                const response = await fetch(WEB_APP_URL, { method: 'POST', body: formData });
+                const response = await fetch(WEB_APP_URL, { method: 'POST', body: formData, mode: 'cors' });
+                if (!response.ok) throw new Error(`Server error (${response.status})`);
                 const result = await response.json();
-                if (result.status === 'SUCCESS') { await fetchData(); } 
-                else { throw new Error(result.message); }
+                if (result.status === 'SUCCESS') { 
+                    await fetchData(); 
+                } else { 
+                    throw new Error(result.message || `An unknown error occurred during ${actionName}.`); 
+                }
             } catch(error) {
-                console.error('Error deleting record:', error);
-                showInfo('Delete Error', `Failed to delete record: ${error.message}`);
-                showLoader(false);
+                console.error(`Error during ${actionName}:`, error);
+                showInfo(`${actionName} Error`, `Failed to ${actionName.toLowerCase()} record: ${error.message}`);
+            } finally {
+                if (loader.style.display === 'block') {
+                    showLoader(false);
+                }
             }
         }
 
+        async function deleteRecord() {
+            const rowIndex = confirmOkBtn.dataset.rowIndex;
+            const formData = new FormData();
+            formData.append('action', 'delete');
+            formData.append('rowIndex', rowIndex);
+            await performAction(formData, 'Delete');
+        }
+
         function showInfo(title, message) { infoTitle.textContent = title; infoMessage.textContent = message; infoModal.style.display = 'block'; }
-        function showDeleteConfirm(rowIndex) { confirmOkBtn.dataset.rowIndex = rowIndex; confirmModal.style.display = 'block'; }
         function showLoader(show) { if (!loader || !tableWrapper) return; loader.style.display = show ? 'block' : 'none'; tableWrapper.style.display = show ? 'none' : 'block'; }
         function escapeHtml(unsafe) { return String(unsafe || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]); }
 
@@ -631,6 +628,4 @@
     </script>
 </body>
 </html>
-
-
 
