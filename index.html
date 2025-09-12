@@ -441,7 +441,6 @@
         const monthMap = { "January": "01", "February": "02", "March": "03", "April": "04", "May": "05", "June": "06", "July": "07", "August": "08", "September": "09", "October": "10", "November": "11", "December": "12" };
         const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         
-        // Form field visibility configuration
         const formFieldConfig = {
             'stay': ['date_month','year','type','status','name','booking_no_pnr','check_in_date','check_in_time','check_out_date','check_out_time','duration_days','duration_hours','guest_name','guest_initials','fare','pdf_link'],
             'travel': ['date_month','year','type','status','name','booking_no_pnr','start_time','end_time','start_date','end_date','duration_days','duration_hours','guest_name','guest_initials','fare','train_no','departure_city','arrival_city','seat_no','berth','pdf_link']
@@ -519,21 +518,12 @@
             renderTable(sheetHeaders, filteredRecords);
         }
         
-        // --- NEW: Function to update form field visibility ---
         function updateFormVisibility(selectedType) {
-            const fieldsToShow = formFieldConfig[selectedType] || sheetHeaders; // Show all if type is not in config
-            const allFormFields = formFieldsContainer.querySelectorAll('div');
-
+            const fieldsToShow = formFieldConfig[selectedType] || sheetHeaders;
+            const allFormFields = formFieldsContainer.querySelectorAll('div[data-field-name]');
             allFormFields.forEach(fieldDiv => {
-                const input = fieldDiv.querySelector('input, select');
-                // The name is directly on the input/select, or on the first select of a picker
-                const fieldName = input ? (input.name || input.id.split('-')[0]) : null;
-
-                if (fieldName && fieldsToShow.includes(fieldName)) {
-                    fieldDiv.style.display = 'block';
-                } else {
-                    fieldDiv.style.display = 'none';
-                }
+                const fieldName = fieldDiv.dataset.fieldName;
+                fieldDiv.style.display = fieldsToShow.includes(fieldName) ? 'block' : 'none';
             });
         }
 
@@ -546,14 +536,14 @@
                 let fieldHTML = '';
                 if (fixedDropdownOptions.hasOwnProperty(header)) {
                     const optionsHTML = fixedDropdownOptions[header].map(o => `<option value="${escapeHtml(o)}" ${value === o ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('');
-                    fieldHTML = `<div><label>${header}</label><select name="${header}">${optionsHTML}</select></div>`;
+                    fieldHTML = `<div data-field-name="${header}"><label>${header}</label><select name="${header}">${optionsHTML}</select></div>`;
                 } else if (dynamicDatalistColumns.includes(header)) {
                     const optionsHTML = (uniqueValues[header] || []).map(o => `<option value="${escapeHtml(o)}"></option>`).join('');
-                    fieldHTML = `<div><label>${header}</label><input type="text" name="${header}" list="${header}-datalist" value="${escapeHtml(value)}" autocomplete="off"><datalist id="${header}-datalist">${optionsHTML}</datalist></div>`;
+                    fieldHTML = `<div data-field-name="${header}"><label>${header}</label><input type="text" name="${header}" list="${header}-datalist" value="${escapeHtml(value)}" autocomplete="off"><datalist id="${header}-datalist">${optionsHTML}</datalist></div>`;
                 } else if (specialInputTypes.hasOwnProperty(header)) {
                     const inputType = specialInputTypes[header];
                     const formattedValue = (inputType === 'date' && value) ? parseSheetDate(value) : value;
-                    fieldHTML = `<div><label>${header}</label><input type="${inputType}" name="${header}" value="${escapeHtml(formattedValue)}"></div>`;
+                    fieldHTML = `<div data-field-name="${header}"><label>${header}</label><input type="${inputType}" name="${header}" value="${escapeHtml(formattedValue)}"></div>`;
                 } else if (header === dateMonthColumn) {
                     let [currentDay, currentMonth] = value ? value.split(' ') : [1, 'January'];
                     currentDay = parseInt(currentDay, 10);
@@ -562,7 +552,7 @@
                     fieldHTML = `<div data-field-name="date_month"><label>date_month</label><div class="day-month-picker"><select id="date_month-day-picker">${daysOptions}</select><select id="date_month-month-picker">${monthsOptions}</select></div></div>`;
                 } else if (header === durationDaysColumn) {
                     let optionsHTML = ''; for (let i = 0; i <= 10; i++) { const dayValue = `${i} Day${i !== 1 ? 's' : ''}`; optionsHTML += `<option value="${dayValue}" ${value === dayValue ? 'selected' : ''}>${dayValue}</option>`;}
-                    fieldHTML = `<div><label>duration_days</label><select name="duration_days">${optionsHTML}</select></div>`;
+                    fieldHTML = `<div data-field-name="duration_days"><label>duration_days</label><select name="duration_days">${optionsHTML}</select></div>`;
                 } else if (header === durationHoursColumn) {
                     let [currentHours, currentMinutes] = [0, 0];
                     if (value) { const h = value.match(/(\d+)h/); const m = value.match(/(\d+)m/); if (h) currentHours = parseInt(h[1], 10); if (m) currentMinutes = parseInt(m[1], 10);}
@@ -570,16 +560,14 @@
                     let minutesOptions = ''; for (let i = 0; i < 60; i++) minutesOptions += `<option value="${i}" ${i === currentMinutes ? 'selected' : ''}>${i}m</option>`;
                     fieldHTML = `<div data-field-name="duration_hours"><label>duration_hours</label><div class="duration-picker"><select id="duration_hours-h-picker">${hoursOptions}</select><select id="duration_hours-m-picker">${minutesOptions}</select></div></div>`;
                 } else {
-                    fieldHTML = `<div><label>${header}</label><input type="text" name="${header}" value="${escapeHtml(value)}"></div>`;
+                    fieldHTML = `<div data-field-name="${header}"><label>${header}</label><input type="text" name="${header}" value="${escapeHtml(value)}"></div>`;
                 }
                 formFieldsContainer.innerHTML += fieldHTML;
             });
             
-            // Add listener to the 'type' dropdown
             const typeSelect = formFieldsContainer.querySelector('[name="type"]');
             if(typeSelect) {
                 typeSelect.addEventListener('change', () => updateFormVisibility(typeSelect.value));
-                // Initial visibility setup
                 updateFormVisibility(record ? record.type : typeSelect.value);
             }
 
@@ -645,7 +633,7 @@
         closeModalBtn.addEventListener('click', () => dataModal.style.display = 'none');
         cancelBtn.addEventListener('click', () => dataModal.style.display = 'none');
         dataForm.addEventListener('submit', handleFormSubmit);
-        yearFilter.addEventListener('change', () => { updateDependentFilters(); applyFilter(); });
+        yearFilter.addEventListener('change', () => { updateDateFilter(); applyFilter(); });
         dateFilter.addEventListener('change', applyFilter);
         confirmCancelBtn.addEventListener('click', () => confirmModal.style.display = 'none');
         confirmOkBtn.addEventListener('click', deleteRecord);
