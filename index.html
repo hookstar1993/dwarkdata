@@ -126,7 +126,22 @@
         }
         .filter-group { display: flex; align-items: center; gap: 10px; }
         .filter-group label { font-weight: 500; font-size: 0.95em; }
-        .filter-group select { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--card-background); color: var(--text-color); font-family: var(--font-family); font-size: 0.9em; cursor: pointer; }
+        .filter-group select, .filter-group input[type="text"] {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--card-background);
+            color: var(--text-color);
+            font-family: var(--font-family);
+            font-size: 0.9em;
+            cursor: pointer;
+        }
+        .filter-group input[type="text"] {
+             min-width: 250px;
+        }
+        .search-group {
+             margin-left: auto;
+        }
         
         /* Record Count Styles */
         .record-summary {
@@ -201,6 +216,7 @@
         .modal-content { background-color: var(--card-background); margin: 8% auto; padding: 30px; border: 1px solid var(--border-color); width: 90%; max-width: 500px; border-radius: var(--border-radius); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); animation: slideIn 0.4s; }
         .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; transition: color 0.3s; }
         .close-btn:hover { color: var(--text-color); }
+        #info-message { white-space: pre-wrap; } /* Allow newlines in info message */
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideIn { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
@@ -218,8 +234,8 @@
         
         #save-btn { background-color: var(--primary-color); color: white; position: relative; min-width: 90px; }
         #cancel-btn, #confirm-cancel-btn { background-color: #ccc; }
-        #confirm-ok-btn { background-color: var(--danger-color); color: white; }
-        #confirm-ok-btn.duplicate { background-color: var(--info-color); }
+        #confirm-ok-btn.delete { background-color: var(--danger-color); color: white; }
+        #confirm-ok-btn.duplicate { background-color: var(--info-color); color: white; }
         
         /* Loader Styles */
         .loader-container { text-align: center; padding: 50px; }
@@ -258,6 +274,12 @@
                 <div class="filter-group">
                     <label for="dateFilter">Filter by Date:</label>
                     <select id="dateFilter"><option value="all">All Dates</option></select>
+                </div>
+                <div class="filter-group search-group">
+                    <label for="searchFilter">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; opacity: 0.7;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </label>
+                    <input type="text" id="searchFilter" placeholder="Search all fields...">
                 </div>
             </div>
             
@@ -315,7 +337,7 @@
     </div>
 
     <script>
-        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzMeXXivbV3ZYlGM69b4TZuSzGBaX0VwSCRmHkXCO_JU92RHfHEFcDKQJ0NvYbuL-q1/exec';
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyeZLK5i1x9QsQHvGf_Jja6bxSIYtUJ3uXMRFPNRzzgebsKWSGFmDMs_KTi5lVxFRyv/exec';
 
         // --- Get All Elements ---
         const tableHead = document.getElementById('data-table-head');
@@ -333,6 +355,7 @@
         const formFieldsContainer = document.getElementById('form-fields-container');
         const yearFilter = document.getElementById('yearFilter');
         const dateFilter = document.getElementById('dateFilter');
+        const searchFilter = document.getElementById('searchFilter');
         const confirmModal = document.getElementById('confirm-modal');
         const confirmTitle = document.getElementById('confirm-title');
         const confirmMessage = document.getElementById('confirm-message');
@@ -358,7 +381,6 @@
         const durationHoursColumn = 'duration_hours';
         const dateMonthColumn = 'date_month';
         const monthMap = { "January": 1, "February": 2, "March": 3, "April": 4, "May": 5, "June": 6, "July": 7, "August": 8, "September": 9, "October": 10, "November": 11, "December": 12 };
-        const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         
         const formFieldConfig = {
             'stay': ['date_month','year','type','status','name','booking_no_pnr','check_in_date','check_in_time','check_out_date','check_out_time','duration_days','duration_hours','guest_name','guest_initials','fare','pdf_link'],
@@ -383,10 +405,34 @@
                     
                     if (monthB !== monthA) return monthB - monthA;
                     return parseInt(dayB, 10) - parseInt(dayA, 10);
-                } catch (e) {
-                    return 0; // Return 0 if dates are malformed, keeping original order
-                }
+                } catch (e) { return 0; }
             });
+        }
+        
+        const handleFetchError = (error, context) => {
+            console.error(`Error during ${context}:`, error);
+            let title = `${context} Error`;
+            let message = `Failed to ${context.toLowerCase()} the record. A network error occurred.`;
+
+            if (error.message.includes('Failed to fetch')) {
+                title = 'Connection Error';
+                message = `The request to the server failed. This is almost always caused by an incorrect or outdated Web App URL.\n\nPlease follow these steps:\n1. Open your Google Apps Script.\n2. Click "Deploy" > "New deployment".\n3. Set "Who has access" to "Anyone".\n4. Copy the new Web App URL.\n5. Paste the new URL into the WEB_APP_URL variable in this HTML file.`;
+            } else {
+                message = `An unexpected error occurred: ${error.message}`;
+            }
+            showInfo(title, message);
+        };
+
+        function processDataPayload(data) {
+            if (!data || !data.rows || !data.headers) {
+                 throw new Error("Received incomplete data from the server.");
+            }
+            sheetHeaders = data.headers;
+            uniqueValues = data.uniqueValues;
+            allRecords = data.rows; 
+            sortRecords(allRecords);
+            populateFilters(allRecords); 
+            applyFilter();
         }
 
         // --- Core Application Logic ---
@@ -394,27 +440,12 @@
             showLoader(true);
             try {
                 const response = await fetch(WEB_APP_URL, { method: 'GET', mode: 'cors', redirect: 'follow' });
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Server responded with an error:', response.status, errorText);
-                    throw new Error(`Server error (${response.status}). Check browser console for details.`);
-                }
+                if (!response.ok) throw new Error(`Server responded with status: ${response.status}`);
                 const data = await response.json();
-                if (data.status === 'ERROR') {
-                    throw new Error(data.message);
-                }
-                sheetHeaders = data.headers;
-                uniqueValues = data.uniqueValues;
-                allRecords = data.rows; 
-                sortRecords(allRecords);
-                populateFilters(allRecords); 
-                renderTable(sheetHeaders, allRecords); 
+                if (data.status === 'ERROR') throw new Error(data.message);
+                processDataPayload(data);
             } catch (error) {
-                console.error('Error fetching data:', error);
-                showInfo(
-                    'Connection Failed', 
-                    `Could not connect to the database. Please check your Google Apps Script deployment settings and make sure 'Who has access' is set to 'Anyone'.`
-                );
+                handleFetchError(error, 'Data Fetch');
             } finally {
                 showLoader(false);
             }
@@ -431,7 +462,10 @@
             headerRow.innerHTML += `<th class="actions">Actions</th>`;
             tableHead.appendChild(headerRow);
             
-            if (rows.length === 0) { tableBody.innerHTML = `<tr><td colspan="${headers.length + 1}" style="text-align:center;">No records found.</td></tr>`; return; }
+            if (rows.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="${headers.length + 1}" style="text-align:center;">No records found.</td></tr>`;
+                return;
+            }
             
             let lastDate = null;
             let colorIndex = 0;
@@ -471,9 +505,11 @@
             const dateMonthValues = [...new Set(recordsToUse.map(r => r.date_month).filter(Boolean))];
             
             dateMonthValues.sort((a, b) => {
-                const monthA = monthMap[a.split(' ')[1]];
-                const monthB = monthMap[b.split(' ')[1]];
-                return monthB - monthA;
+                try {
+                    const monthA = monthMap[a.split(' ')[1]];
+                    const monthB = monthMap[b.split(' ')[1]];
+                    return monthB - monthA;
+                } catch(e) { return 0; }
             });
             dateFilter.innerHTML = '<option value="all">All Dates</option>';
             dateMonthValues.forEach(date => dateFilter.add(new Option(date, date)));
@@ -482,9 +518,17 @@
         function applyFilter() {
             const selectedYear = yearFilter.value;
             const selectedDate = dateFilter.value;
+            const searchTerm = searchFilter.value.toLowerCase();
             let filteredRecords = allRecords;
             if (selectedYear !== 'all') filteredRecords = filteredRecords.filter(record => String(record.year) === selectedYear);
             if (selectedDate !== 'all') filteredRecords = filteredRecords.filter(record => record.date_month === selectedDate);
+            if (searchTerm) {
+                filteredRecords = filteredRecords.filter(record => 
+                    Object.values(record).some(value => 
+                        String(value).toLowerCase().includes(searchTerm)
+                    )
+                );
+            }
             renderTable(sheetHeaders, filteredRecords);
         }
         
@@ -554,22 +598,18 @@
             if (document.getElementById('duration_hours-h-picker')) { formData.set('duration_hours', `${document.getElementById('duration_hours-h-picker').value}h ${document.getElementById('duration_hours-m-picker').value}m`);}
             for (const header in specialInputTypes) { if (specialInputTypes[header] === 'date' && formData.has(header) && formData.get(header)) { formData.set(header, formatForSheet(formData.get(header))); } }
             formData.append('action', rowIndexInput.value ? 'update' : 'create');
+            
             try {
                 const response = await fetch(WEB_APP_URL, { method: 'POST', body: formData, mode: 'cors' });
                 if (!response.ok) throw new Error(`Server error (${response.status})`);
                 const result = await response.json();
-                if (result.status === 'SUCCESS') { dataModal.style.display = 'none'; await fetchData(); } 
-                else { throw new Error(result.message || 'An unknown server error occurred.'); }
+                if (result.status !== 'SUCCESS') throw new Error(result.message);
+                
+                processDataPayload(result);
+                dataModal.style.display = 'none';
+
             } catch (error) {
-                console.error('Error submitting form:', error);
-                if (error.message.includes('Failed to fetch')) {
-                    showInfo(
-                        'Connection Failed', 
-                        `Could not submit data to the server. Please check your internet connection and ensure your Google Apps Script is deployed correctly with 'Who has access' set to 'Anyone'.`
-                    );
-                } else {
-                    showInfo('Save Error', `Failed to save record: ${error.message}`);
-                }
+                handleFetchError(error, 'Save');
             } finally {
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = originalButtonContent;
@@ -582,7 +622,7 @@
             confirmOkBtn.textContent = 'Yes, Delete';
             confirmOkBtn.dataset.rowIndex = rowIndex;
             confirmOkBtn.dataset.action = 'delete';
-            confirmOkBtn.className = ''; // Reset class
+            confirmOkBtn.classList.remove('duplicate');
             confirmOkBtn.classList.add('delete');
             confirmModal.style.display = 'block';
         }
@@ -593,7 +633,7 @@
             confirmOkBtn.textContent = 'Yes, Duplicate';
             confirmOkBtn.dataset.rowIndex = rowIndex;
             confirmOkBtn.dataset.action = 'duplicate';
-            confirmOkBtn.className = ''; // Reset class
+            confirmOkBtn.classList.remove('delete');
             confirmOkBtn.classList.add('duplicate');
             confirmModal.style.display = 'block';
         }
@@ -605,38 +645,25 @@
                 const response = await fetch(WEB_APP_URL, { method: 'POST', body: formData, mode: 'cors' });
                 if (!response.ok) throw new Error(`Server error (${response.status})`);
                 const result = await response.json();
-                if (result.status === 'SUCCESS') { 
-                    await fetchData(); 
-                } else { 
-                    throw new Error(result.message || `An unknown error occurred during ${actionName}.`); 
-                }
+                if (result.status !== 'SUCCESS') throw new Error(result.message);
+                
+                processDataPayload(result);
+
             } catch(error) {
-                console.error(`Error during ${actionName}:`, error);
-                if (error.message.includes('Failed to fetch')) {
-                     showInfo(
-                        'Connection Failed', 
-                        `Could not perform action. Please check your internet connection and ensure your Google Apps Script is deployed correctly with 'Who has access' set to 'Anyone'.`
-                    );
-                } else {
-                    showInfo(`${actionName} Error`, `Failed to ${actionName.toLowerCase()} record: ${error.message}`);
-                }
+                handleFetchError(error, actionName);
             } finally {
-                if (loader.style.display === 'block') {
-                    showLoader(false);
-                }
+                showLoader(false);
             }
         }
         
-        async function deleteRecord() {
-            const rowIndex = confirmOkBtn.dataset.rowIndex;
+        async function deleteRecord(rowIndex) {
             const formData = new FormData();
             formData.append('action', 'delete');
             formData.append('rowIndex', rowIndex);
             await performAction(formData, 'Delete');
         }
 
-        async function duplicateRecord() {
-            const rowIndex = confirmOkBtn.dataset.rowIndex;
+        async function duplicateRecord(rowIndex) {
             const formData = new FormData();
             formData.append('action', 'duplicate');
             formData.append('rowIndex', rowIndex);
@@ -645,7 +672,7 @@
 
         function showInfo(title, message) { infoTitle.textContent = title; infoMessage.textContent = message; infoModal.style.display = 'block'; }
         function showLoader(show) { if (!loader || !tableWrapper) return; loader.style.display = show ? 'block' : 'none'; tableWrapper.style.display = show ? 'none' : 'block'; }
-        function escapeHtml(unsafe) { return String(unsafe || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#0-39;'})[m]); }
+        function escapeHtml(unsafe) { return String(unsafe || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]); }
 
         // --- Theme Switcher Logic ---
         const themeToggle = document.getElementById('theme-toggle');
@@ -663,13 +690,15 @@
         dataForm.addEventListener('submit', handleFormSubmit);
         yearFilter.addEventListener('change', () => { updateDateFilter(); applyFilter(); });
         dateFilter.addEventListener('change', applyFilter);
+        searchFilter.addEventListener('input', applyFilter);
         confirmCancelBtn.addEventListener('click', () => confirmModal.style.display = 'none');
         confirmOkBtn.addEventListener('click', (e) => {
             const action = e.target.dataset.action;
+            const rowIndex = e.target.dataset.rowIndex;
             if (action === 'delete') {
-                deleteRecord();
+                deleteRecord(rowIndex);
             } else if (action === 'duplicate') {
-                duplicateRecord();
+                duplicateRecord(rowIndex);
             }
         });
         infoOkBtn.addEventListener('click', () => infoModal.style.display = 'none');
